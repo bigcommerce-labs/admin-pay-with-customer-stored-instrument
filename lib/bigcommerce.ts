@@ -20,15 +20,25 @@ export interface BcCustomer {
   email: string;
 }
 
-export interface BcPaymentMethodInstrument {
+export interface BcStoredCard {
   type: 'stored_card';
   token: string;
   brand: string;
   last_4: string;
   expiry_month: number;
   expiry_year: number;
+  issuer_identification_number?: string;
   is_default: boolean;
 }
+
+export interface BcStoredPaypal {
+  type: 'stored_paypal_account';
+  token: string;
+  email: string;
+  is_default: boolean;
+}
+
+export type BcPaymentMethodInstrument = BcStoredCard | BcStoredPaypal;
 
 export interface BcPaymentMethod {
   id: string; // gateway id, e.g. 'braintree.card' — the payment_method_id

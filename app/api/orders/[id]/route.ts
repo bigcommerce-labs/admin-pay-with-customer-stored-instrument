@@ -2,15 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireContext, UnauthorizedError } from '@/lib/session';
 import { BcApiError } from '@/lib/bigcommerce';
 
-interface AggregatedInstrument {
-  paymentMethodId: string;
-  gatewayName: string;
-  token: string;
-  brand: string;
-  last4: string;
-  expiry: string;
-  isDefault: boolean;
-}
+type AggregatedInstrument =
+  | {
+      type: 'stored_card';
+      paymentMethodId: string;
+      gatewayName: string;
+      token: string;
+      brand: string;
+      last4: string;
+      expiry: string;
+      isDefault: boolean;
+    }
+  | {
+      type: 'stored_paypal_account';
+      paymentMethodId: string;
+      gatewayName: string;
+      token: string;
+      email: string;
+      isDefault: boolean;
+    };
 
 type Eligibility =
   | { eligible: true }
@@ -69,15 +79,28 @@ export async function GET(
     ]);
 
     const instruments: AggregatedInstrument[] = methods.flatMap((m) =>
-      (m.stored_instruments ?? []).map((i) => ({
-        paymentMethodId: m.id,
-        gatewayName: m.name,
-        token: i.token,
-        brand: i.brand,
-        last4: i.last_4,
-        expiry: `${String(i.expiry_month).padStart(2, '0')}/${i.expiry_year}`,
-        isDefault: i.is_default,
-      }))
+      (m.stored_instruments ?? []).map((i): AggregatedInstrument => {
+        if (i.type === 'stored_paypal_account') {
+          return {
+            type: 'stored_paypal_account',
+            paymentMethodId: m.id,
+            gatewayName: m.name,
+            token: i.token,
+            email: i.email,
+            isDefault: i.is_default,
+          };
+        }
+        return {
+          type: 'stored_card',
+          paymentMethodId: m.id,
+          gatewayName: m.name,
+          token: i.token,
+          brand: i.brand,
+          last4: i.last_4,
+          expiry: `${String(i.expiry_month).padStart(2, '0')}/${i.expiry_year}`,
+          isDefault: i.is_default,
+        };
+      }),
     );
 
     const eligibility: Eligibility = instruments.length > 0

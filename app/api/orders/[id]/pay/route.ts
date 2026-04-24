@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireContext, UnauthorizedError } from '@/lib/session';
 import { BcApiError } from '@/lib/bigcommerce';
-import { processStoredCardPayment } from '@/lib/payments';
+import { processStoredInstrumentPayment } from '@/lib/payments';
 
 export async function POST(
   req: NextRequest,
@@ -39,9 +39,10 @@ export async function POST(
     }
 
     const pat = await context.client.createPaymentAccessToken(orderId);
-    const result = await processStoredCardPayment({
+    const result = await processStoredInstrumentPayment({
       storeHash: context.session.storeHash,
       pat,
+      instrumentType: instrumentMatch.type,
       instrumentToken: body.instrumentToken,
       paymentMethodId: body.paymentMethodId,
     });

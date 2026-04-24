@@ -1,5 +1,7 @@
 const PAYMENTS_BASE = 'https://payments.bigcommerce.com';
 
+export type StoredInstrumentType = 'stored_card' | 'stored_paypal_account';
+
 export interface ProcessPaymentResult {
   id: string;
   status: 'success' | 'failed' | string;
@@ -13,9 +15,10 @@ export interface ProcessPaymentFailure {
   errors?: unknown;
 }
 
-export async function processStoredCardPayment(args: {
+export async function processStoredInstrumentPayment(args: {
   storeHash: string;
   pat: string;
+  instrumentType: StoredInstrumentType;
   instrumentToken: string;
   paymentMethodId: string;
 }): Promise<{ ok: true; data: ProcessPaymentResult } | { ok: false; error: ProcessPaymentFailure }> {
@@ -28,7 +31,7 @@ export async function processStoredCardPayment(args: {
     },
     body: JSON.stringify({
       payment: {
-        instrument: { type: 'stored_card', token: args.instrumentToken },
+        instrument: { type: args.instrumentType, token: args.instrumentToken },
         payment_method_id: args.paymentMethodId,
       },
     }),

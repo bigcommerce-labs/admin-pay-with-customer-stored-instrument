@@ -12,9 +12,21 @@ interface OrderSummary {
   dateCreated: string; billing: { name: string; email: string };
 }
 interface Customer { id: number; first_name: string; last_name: string; email: string }
-interface Instrument {
-  paymentMethodId: string; gatewayName: string; token: string;
-  brand: string; last4: string; expiry: string; isDefault: boolean;
+type Instrument =
+  | {
+      type: 'stored_card';
+      paymentMethodId: string; gatewayName: string; token: string;
+      brand: string; last4: string; expiry: string; isDefault: boolean;
+    }
+  | {
+      type: 'stored_paypal_account';
+      paymentMethodId: string; gatewayName: string; token: string;
+      email: string; isDefault: boolean;
+    };
+
+function instrumentLabel(i: Instrument): string {
+  if (i.type === 'stored_paypal_account') return `PayPal · ${i.email}`;
+  return `${i.brand} ****${i.last4} · exp ${i.expiry}`;
 }
 type Eligibility =
   | { eligible: true }
@@ -155,7 +167,7 @@ export default function PayWithSavedPage() {
                   name="instrument"
                   checked={selectedToken === i.token}
                   onChange={() => setSelectedToken(i.token)}
-                  label={`${i.brand} ****${i.last4} · exp ${i.expiry}${i.isDefault ? ' · default' : ''}`}
+                  label={`${instrumentLabel(i)}${i.isDefault ? ' · default' : ''}`}
                   description={`Gateway: ${i.gatewayName} (${i.paymentMethodId})`}
                 />
               </Box>
