@@ -56,7 +56,8 @@ export interface BcCurrency {
   thousands_token: string;
   token: string;
   is_default: boolean;
-  is_enabled: boolean;
+  enabled: boolean;
+  is_transactional: boolean;
 }
 
 export class BigCommerceClient {
@@ -97,10 +98,11 @@ export class BigCommerceClient {
   }
 
   async getCurrencies(): Promise<BcCurrency[]> {
-    const res = await this.fetch('/v3/currencies');
+    // /v2/currencies returns a bare array (no `data` envelope), unlike v3 endpoints.
+    const res = await this.fetch('/v2/currencies');
     if (!res.ok) throw new BcApiError(`getCurrencies failed`, res.status, await res.text());
     const body = await res.json();
-    return body?.data ?? [];
+    return Array.isArray(body) ? body : [];
   }
 
   async createPaymentAccessToken(orderId: number): Promise<string> {
