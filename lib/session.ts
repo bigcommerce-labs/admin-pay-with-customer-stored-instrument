@@ -14,7 +14,7 @@ export async function requireContext(): Promise<RequestContext> {
   const session = readSessionCookie(cookieVal);
   if (!session) throw new UnauthorizedError('No valid session cookie');
 
-  const store = getStore(session.storeHash);
+  const store = await getStore(session.storeHash);
   if (!store) throw new UnauthorizedError('Store not installed');
 
   return {

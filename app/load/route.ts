@@ -17,7 +17,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   const storeHash = storeHashFromSub(decoded.sub);
-  if (!getStore(storeHash)) {
+  if (!(await getStore(storeHash))) {
     return NextResponse.json({ error: 'App is not installed for this store' }, { status: 403 });
   }
 

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   try {
     const decoded = verifySignedPayload(signedPayload);
-    deleteStore(storeHashFromSub(decoded.sub));
+    await deleteStore(storeHashFromSub(decoded.sub));
   } catch (err) {
     return NextResponse.json({ error: 'Invalid signed_payload_jwt', detail: String(err) }, { status: 401 });
   }

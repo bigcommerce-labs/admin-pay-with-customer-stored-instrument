@@ -1,5 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { Redis } from '@upstash/redis';
 
 export interface StoreRecord {
   accessToken: string;
@@ -9,32 +8,23 @@ export interface StoreRecord {
   registeredExtensionId?: string;
 }
 
-const DB_PATH = resolve(process.cwd(), 'data', 'stores.json');
+const redis = Redis.fromEnv();
+const key = (storeHash: string) => `store:${storeHash}`;
 
-function load(): Record<string, StoreRecord> {
-  if (!existsSync(DB_PATH)) return {};
-  return JSON.parse(readFileSync(DB_PATH, 'utf8'));
+export async function getStore(storeHash: string): Promise<StoreRecord | null> {
+  return redis.get<StoreRecord>(key(storeHash));
 }
 
-function save(db: Record<string, StoreRecord>): void {
-  mkdirSync(dirname(DB_PATH), { recursive: true });
-  writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
-}
-
-export function getStore(storeHash: string): StoreRecord | undefined {
-  return load()[storeHash];
-}
-
-export function upsertStore(storeHash: string, patch: Partial<StoreRecord>): StoreRecord {
-  const db = load();
-  const next = { ...(db[storeHash] ?? {} as StoreRecord), ...patch };
-  db[storeHash] = next;
-  save(db);
+export async function upsertStore(
+  storeHash: string,
+  patch: Partial<StoreRecord>,
+): Promise<StoreRecord> {
+  const existing = (await redis.get<StoreRecord>(key(storeHash))) ?? ({} as StoreRecord);
+  const next = { ...existing, ...patch };
+  await redis.set(key(storeHash), next);
   return next;
 }
 
-export function deleteStore(storeHash: string): void {
-  const db = load();
-  delete db[storeHash];
-  save(db);
+export async function deleteStore(storeHash: string): Promise<void> {
+  await redis.del(key(storeHash));
 }

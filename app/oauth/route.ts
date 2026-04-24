@@ -74,7 +74,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     console.error('App extension registration failed:', err);
   }
 
-  upsertStore(storeHash, {
+  await upsertStore(storeHash, {
     accessToken: payload.access_token,
     scope: payload.scope,
     ownerEmail: payload.owner?.email,
