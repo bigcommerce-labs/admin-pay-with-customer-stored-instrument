@@ -8,7 +8,8 @@ import {
 
 interface OrderSummary {
   id: number; statusId: number; status: string; paymentStatus: string;
-  customerId: number; total: string; currency: string; itemsTotal: number;
+  customerId: number; total: string; totalFormatted: string;
+  currency: string; itemsTotal: number;
   dateCreated: string; billing: { name: string; email: string };
 }
 interface Customer { id: number; first_name: string; last_name: string; email: string }
@@ -175,7 +176,7 @@ export default function PayWithSavedPage() {
           </Flex>
           <Box marginTop="medium">
             <Button variant="primary" onClick={submit} disabled={!selected || submitting} isLoading={submitting}>
-              Apply payment · {data.order.currency} {data.order.total}
+              Apply payment · {data.order.currency} {data.order.totalFormatted}
             </Button>
           </Box>
         </Panel>
@@ -192,7 +193,7 @@ function OrderSummaryPanel({ order, customer }: { order: OrderSummary; customer:
           <H3>Order</H3>
           <Text>Status: <b>{order.status}</b></Text>
           <Text>Payment: <b>{order.paymentStatus || '—'}</b></Text>
-          <Text>Total: <b>{order.currency} {order.total}</b></Text>
+          <Text>Total: <b>{order.currency} {order.totalFormatted}</b></Text>
           <Small>Items: {order.itemsTotal} · Created {new Date(order.dateCreated).toLocaleString()}</Small>
         </Box>
         <Box>

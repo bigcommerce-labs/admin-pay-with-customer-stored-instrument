@@ -48,6 +48,17 @@ export interface BcPaymentMethod {
   stored_instruments: BcPaymentMethodInstrument[];
 }
 
+export interface BcCurrency {
+  id: number;
+  currency_code: string;
+  decimal_places: number;
+  decimal_token: string;
+  thousands_token: string;
+  token: string;
+  is_default: boolean;
+  is_enabled: boolean;
+}
+
 export class BigCommerceClient {
   constructor(private readonly storeHash: string, private readonly accessToken: string) {}
 
@@ -81,6 +92,13 @@ export class BigCommerceClient {
   async getPaymentMethodsForOrder(orderId: number): Promise<BcPaymentMethod[]> {
     const res = await this.fetch(`/v3/payments/methods?order_id=${orderId}`);
     if (!res.ok) throw new BcApiError(`getPaymentMethods(${orderId}) failed`, res.status, await res.text());
+    const body = await res.json();
+    return body?.data ?? [];
+  }
+
+  async getCurrencies(): Promise<BcCurrency[]> {
+    const res = await this.fetch('/v3/currencies');
+    if (!res.ok) throw new BcApiError(`getCurrencies failed`, res.status, await res.text());
     const body = await res.json();
     return body?.data ?? [];
   }

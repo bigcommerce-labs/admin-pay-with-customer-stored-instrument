@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireContext, UnauthorizedError } from '@/lib/session';
-import { BcApiError } from '@/lib/bigcommerce';
+import { BcApiError, BcCurrency } from '@/lib/bigcommerce';
 
 type AggregatedInstrument =
   | {
@@ -42,13 +42,17 @@ export async function GET(
   if (!Number.isFinite(orderId)) return NextResponse.json({ error: 'Invalid order id' }, { status: 400 });
 
   try {
-    const order = await context.client.getOrder(orderId);
+    const [order, currencies] = await Promise.all([
+      context.client.getOrder(orderId),
+      context.client.getCurrencies(),
+    ]);
+    const currency = currencies.find((c) => c.currency_code === order.currency_code);
     const adminOrderUrl = `https://store-${context.session.storeHash}.mybigcommerce.com/manage/orders/${orderId}`;
 
     // Guest check first — no customer data to fetch.
     if (order.customer_id === 0) {
       return NextResponse.json({
-        order: summarizeOrder(order),
+        order: summarizeOrder(order, currency),
         customer: null,
         instruments: [],
         eligibility: { eligible: false, reason: 'guest' } as Eligibility,
@@ -60,7 +64,7 @@ export async function GET(
     if (order.status_id !== 0) {
       const customer = await context.client.getCustomer(order.customer_id);
       return NextResponse.json({
-        order: summarizeOrder(order),
+        order: summarizeOrder(order, currency),
         customer,
         instruments: [],
         eligibility: {
@@ -108,7 +112,7 @@ export async function GET(
       : { eligible: false, reason: 'no_instruments' };
 
     return NextResponse.json({
-      order: summarizeOrder(order),
+      order: summarizeOrder(order, currency),
       customer,
       instruments,
       eligibility,
@@ -122,7 +126,10 @@ export async function GET(
   }
 }
 
-function summarizeOrder(o: Awaited<ReturnType<import('@/lib/bigcommerce').BigCommerceClient['getOrder']>>) {
+function summarizeOrder(
+  o: Awaited<ReturnType<import('@/lib/bigcommerce').BigCommerceClient['getOrder']>>,
+  currency: BcCurrency | undefined,
+) {
   return {
     id: o.id,
     statusId: o.status_id,
@@ -130,6 +137,7 @@ function summarizeOrder(o: Awaited<ReturnType<import('@/lib/bigcommerce').BigCom
     paymentStatus: o.payment_status,
     customerId: o.customer_id,
     total: o.total_inc_tax,
+    totalFormatted: formatAmount(o.total_inc_tax, currency),
     currency: o.currency_code,
     itemsTotal: o.items_total,
     dateCreated: o.date_created,
@@ -138,4 +146,12 @@ function summarizeOrder(o: Awaited<ReturnType<import('@/lib/bigcommerce').BigCom
       email: o.billing_address.email,
     },
   };
+}
+
+function formatAmount(raw: string, cfg: BcCurrency | undefined): string {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || !cfg) return raw;
+  const [whole, frac = ''] = n.toFixed(cfg.decimal_places).split('.');
+  const withThousands = whole.replace(/\B(?=(\d{3})+(?!\d))/g, cfg.thousands_token);
+  return cfg.decimal_places > 0 ? `${withThousands}${cfg.decimal_token}${frac}` : withThousands;
 }
